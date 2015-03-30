@@ -1,0 +1,395 @@
+import HRS_JOB_OPENING_MANAGER:OBJ_HRS_JO_MISC:DATA:JOMisc;
+import HRS_JOB_OPENING_MANAGER:COMMON:BUS:JOException;
+import HRS_JOB_OPENING_MANAGER:COMMON:TYPES:JOPsnType;
+import HRS_JOB_OPENING_MANAGER:COMMON:TYPES:JOTeamType;
+import HRS_JOB_OPENING_MANAGER:COMMON:TYPES:JOLocType;
+import HRS_JOB_OPENING_MANAGER:COMMON:TYPES:JOLocAreaType;
+import HRS_JOB_OPENING_MANAGER:COMMON:TYPES:JOExpType;
+import HRS_JOB_OPENING_MANAGER:COMMON:DATA:HR;
+import HRS_BO:BUS:BODefaults;
+import HRS_BO:BUS:PersonProfile;
+import HMCR_FRAMEWORK:ServiceFramework:baseClasses:baseException;
+import HRS_COMMON:COMMON:UTIL:RowAudit;
+
+/**
+  *  class JOMisc
+  *
+  *  @version 1.0
+  *  @author Recruiting Solutions	
+  *
+  *  Module: Job Opening Manager
+  *  Description: Recruiting  job opening miscellaneous object business class
+  *
+  */
+class JOMisc
+   property boolean isFederal get;
+   method JOMisc();
+   method cloneJOMisc(&nbrNewID As number, &nbrCloneID As number);
+   method getJOTeam(&HRS_JOB_OPENING_ID As number) Returns Rowset;
+   method getJOPsnType(&HRS_JOB_OPENING_ID As number) Returns array of HRS_JOB_OPENING_MANAGER:COMMON:TYPES:JOPsnType;
+   method getJOLocType(&HRS_JOB_OPENING_ID As number, &BUSINESS_UNIT As string) Returns array of HRS_JOB_OPENING_MANAGER:COMMON:TYPES:JOLocType;
+   method getJOLocAreaType(&HRS_JOB_OPENING_ID As number, &BUSINESS_UNIT As string) Returns array of HRS_JOB_OPENING_MANAGER:COMMON:TYPES:JOLocAreaType;
+   method getJOTeamType(&HRS_JOB_OPENING_ID As number) Returns array of HRS_JOB_OPENING_MANAGER:COMMON:TYPES:JOTeamType;
+   method insJOExpIntfc(&JOExpType As HRS_JOB_OPENING_MANAGER:COMMON:TYPES:JOExpType);
+private
+   instance HRS_JOB_OPENING_MANAGER:OBJ_HRS_JO_MISC:DATA:JOMisc &JOMisc;
+end-class;
+
+/**
+  *  JOMisc - constructor
+  *
+  */
+method JOMisc
+   &JOMisc = create HRS_JOB_OPENING_MANAGER:OBJ_HRS_JO_MISC:DATA:JOMisc();
+end-method;
+
+
+/**
+  *  cloneJOMisc - clone job opening miscellaneous business logic
+  *  
+  *  @param job opening ID
+  *
+  */
+method cloneJOMisc
+   /+ &nbrNewID as Number, +/
+   /+ &nbrCloneID as Number +/
+   
+   Local HRS_COMMON:COMMON:UTIL:RowAudit &cls_lRowAudit;
+   &cls_lRowAudit = create HRS_COMMON:COMMON:UTIL:RowAudit();
+   
+   Local HRS_JOB_OPENING_MANAGER:COMMON:DATA:HR &HR = create HRS_JOB_OPENING_MANAGER:COMMON:DATA:HR();
+   Local Rowset &rsHRS_JO_POSN_C, &rsHRS_JO_LOC_C, &rsHRS_JO_LOC_AREA_C, &rsHRS_JO_ATCH_C, &rsHRS_JO_NOTE_C, &rsHRS_JO_TEAM_C, &rsHRS_JO_EXP_C, &rsHRS_JO_RPL_C, &rsHRS_JO_NAME_C, &rsHRS_AM_JO_C, &rsHRS_G_JO_PRI_C;
+   Local Rowset &rsHRS_JO_POSN, &rsHRS_JO_LOC, &rsHRS_JO_LOC_AREA, &rsHRS_JO_ATCH, &rsHRS_JO_NOTE, &rsHRS_JO_TEAM, &rsHRS_JO_EXP, &rsHRS_JO_RPL, &rsHRS_JO_NAME, &rsHRS_AM_JO, &rsHRS_G_JO_PRI;
+   Local number &I, &J;
+   
+   /* Retrieve job opening miscellaneouss */
+   &rsHRS_JO_POSN_C = &JOMisc.getJOPosn(&nbrCloneID);
+   &rsHRS_JO_LOC_C = &JOMisc.getJOLoc(&nbrCloneID);
+   &rsHRS_JO_LOC_AREA_C = &JOMisc.getJOLocArea(&nbrCloneID);
+   &rsHRS_JO_ATCH_C = &JOMisc.getJOAtch(&nbrCloneID);
+   &rsHRS_JO_NOTE_C = &JOMisc.getJONote(&nbrCloneID);
+   &rsHRS_JO_TEAM_C = &JOMisc.getJOTeam(&nbrCloneID);
+   &rsHRS_JO_EXP_C = &JOMisc.getJOExp(&nbrCloneID);
+   &rsHRS_JO_RPL_C = &JOMisc.getJORpl(&nbrCloneID);
+   &rsHRS_JO_NAME_C = &JOMisc.getJOName(&nbrCloneID);
+   &rsHRS_AM_JO_C = &JOMisc.getJOAMJO(&nbrCloneID);
+   &rsHRS_G_JO_PRI_C = &JOMisc.getJOPriPl(&nbrCloneID);
+   
+   /* Copy job opening miscellaneous after updating the job opening IDs */
+   If Not &rsHRS_JO_POSN_C(1).IsNew Then
+      &rsHRS_JO_POSN = CreateRowset(Record.HRS_JO_POSN);
+      &rsHRS_JO_POSN_C.CopyTo(&rsHRS_JO_POSN);
+      For &I = 1 To &rsHRS_JO_POSN.ActiveRowCount
+         &rsHRS_JO_POSN(&I).HRS_JO_POSN.HRS_JOB_OPENING_ID.Value = &nbrNewID;
+         /* ICE 1435177001 RR BEGIN */
+         /* Update Audit fields with new audit info */
+         &cls_lRowAudit.UpdateRowauditFields("A", &rsHRS_JO_POSN(&I).HRS_JO_POSN.HRS_ROW_ADD_OPRID.Value, &rsHRS_JO_POSN(&I).HRS_JO_POSN.HRS_ROW_ADD_DTTM.Value, &rsHRS_JO_POSN(&I).HRS_JO_POSN.HRS_ROW_UPD_OPRID.Value, &rsHRS_JO_POSN(&I).HRS_JO_POSN.HRS_ROW_UPD_DTTM.Value);
+         /* ICE 1435177001 END */
+      End-For;
+      &JOMisc.insJOPosn(&rsHRS_JO_POSN);
+   End-If;
+   If Not &rsHRS_JO_LOC_C(1).IsNew Then
+      &rsHRS_JO_LOC = CreateRowset(Record.HRS_JO_LOC);
+      &rsHRS_JO_LOC_C.CopyTo(&rsHRS_JO_LOC);
+      For &I = 1 To &rsHRS_JO_LOC.ActiveRowCount
+         &rsHRS_JO_LOC(&I).HRS_JO_LOC.HRS_JOB_OPENING_ID.Value = &nbrNewID;
+         /* ICE 1435177001 RR BEGIN */
+         /* Update Audit fields with new audit info */
+         &cls_lRowAudit.UpdateRowauditFields("A", &rsHRS_JO_LOC(&I).HRS_JO_LOC.HRS_ROW_ADD_OPRID.Value, &rsHRS_JO_LOC(&I).HRS_JO_LOC.HRS_ROW_ADD_DTTM.Value, &rsHRS_JO_LOC(&I).HRS_JO_LOC.HRS_ROW_UPD_OPRID.Value, &rsHRS_JO_LOC(&I).HRS_JO_LOC.HRS_ROW_UPD_DTTM.Value);
+         /* ICE 1435177001 END */
+      End-For;
+      &JOMisc.insJOLoc(&rsHRS_JO_LOC);
+   End-If;
+   If Not &rsHRS_JO_LOC_AREA_C(1).IsNew Then
+      &rsHRS_JO_LOC_AREA = CreateRowset(Record.HRS_JO_LOC_AREA);
+      &rsHRS_JO_LOC_AREA_C.CopyTo(&rsHRS_JO_LOC_AREA);
+      For &I = 1 To &rsHRS_JO_LOC_AREA.ActiveRowCount
+         &rsHRS_JO_LOC_AREA(&I).HRS_JO_LOC_AREA.HRS_JOB_OPENING_ID.Value = &nbrNewID;
+         /* ICE 1435177001 RR BEGIN */
+         /* Update Audit fields with new audit info */
+         &cls_lRowAudit.UpdateRowauditFields("A", &rsHRS_JO_LOC_AREA(&I).HRS_JO_LOC_AREA.HRS_ROW_ADD_OPRID.Value, &rsHRS_JO_LOC_AREA(&I).HRS_JO_LOC_AREA.HRS_ROW_ADD_DTTM.Value, &rsHRS_JO_LOC_AREA(&I).HRS_JO_LOC_AREA.HRS_ROW_UPD_OPRID.Value, &rsHRS_JO_LOC_AREA(&I).HRS_JO_LOC_AREA.HRS_ROW_UPD_DTTM.Value);
+         /* ICE 1435177001 END */
+      End-For;
+      &JOMisc.insJOLocArea(&rsHRS_JO_LOC_AREA);
+   End-If;
+   If Not &rsHRS_JO_ATCH_C(1).IsNew Then
+      &rsHRS_JO_ATCH = CreateRowset(Record.HRS_JO_ATCH);
+      &rsHRS_JO_ATCH_C.CopyTo(&rsHRS_JO_ATCH);
+      For &I = 1 To &rsHRS_JO_ATCH.ActiveRowCount
+         &rsHRS_JO_ATCH(&I).HRS_JO_ATCH.HRS_JOB_OPENING_ID.Value = &nbrNewID;
+         /* ICE 1435177001 RR BEGIN */
+         /* Update Audit fields with new audit info */
+         &cls_lRowAudit.UpdateRowauditFields("A", &rsHRS_JO_ATCH(&I).HRS_JO_ATCH.HRS_ROW_ADD_OPRID.Value, &rsHRS_JO_ATCH(&I).HRS_JO_ATCH.HRS_ROW_ADD_DTTM.Value, &rsHRS_JO_ATCH(&I).HRS_JO_ATCH.HRS_ROW_UPD_OPRID.Value, &rsHRS_JO_ATCH(&I).HRS_JO_ATCH.HRS_ROW_UPD_DTTM.Value);
+         /* ICE 1435177001 END */
+      End-For;
+      &JOMisc.insJOAtch(&rsHRS_JO_ATCH);
+   End-If;
+   If Not &rsHRS_JO_NOTE_C(1).IsNew Then
+      &rsHRS_JO_NOTE = CreateRowset(Record.HRS_JO_NOTE);
+      &rsHRS_JO_NOTE_C.CopyTo(&rsHRS_JO_NOTE);
+      For &I = 1 To &rsHRS_JO_NOTE.ActiveRowCount
+         &rsHRS_JO_NOTE(&I).HRS_JO_NOTE.HRS_JOB_OPENING_ID.Value = &nbrNewID;
+         /* ICE 1435177001 RR BEGIN */
+         /* Update Audit fields with new audit info */
+         &cls_lRowAudit.UpdateRowauditFields("A", &rsHRS_JO_NOTE(&I).HRS_JO_NOTE.HRS_ROW_ADD_OPRID.Value, &rsHRS_JO_NOTE(&I).HRS_JO_NOTE.HRS_ROW_ADD_DTTM.Value, &rsHRS_JO_NOTE(&I).HRS_JO_NOTE.HRS_ROW_UPD_OPRID.Value, &rsHRS_JO_NOTE(&I).HRS_JO_NOTE.HRS_ROW_UPD_DTTM.Value);
+         /* ICE 1435177001 END */
+      End-For;
+      &JOMisc.insJONote(&rsHRS_JO_NOTE);
+   End-If;
+   If Not &rsHRS_JO_TEAM_C(1).IsNew Then
+      &rsHRS_JO_TEAM = CreateRowset(Record.HRS_JO_TEAM);
+      For &I = 1 To &rsHRS_JO_TEAM_C.ActiveRowCount
+         If &HR.chkPersonActive(&rsHRS_JO_TEAM_C(&I).HRS_JO_TEAM.EMPLID.Value) Then
+            If &I > 1 Then
+               &rsHRS_JO_TEAM.InsertRow(&J);
+            End-If;
+            &J = &J + 1;
+            &rsHRS_JO_TEAM_C(&I).HRS_JO_TEAM.CopyFieldsTo(&rsHRS_JO_TEAM(&J).HRS_JO_TEAM);
+            &rsHRS_JO_TEAM(&J).HRS_JO_TEAM.HRS_JOB_OPENING_ID.Value = &nbrNewID;
+            /* Begin 732259 */
+            If &rsHRS_JO_TEAM(&J).HRS_JO_TEAM.HRS_JO_TM_TYPE.Value = "G" Then
+               &rsHRS_JO_TEAM(&J).HRS_JO_TEAM.EMPLID.Value = %EmployeeId;
+            End-If;
+            /* End 732259 */
+            /* ICE 1435177001 RR BEGIN */
+            /* Update Audit fields with new audit info */
+            &cls_lRowAudit.UpdateRowauditFields("A", &rsHRS_JO_TEAM(&J).HRS_JO_TEAM.HRS_ROW_ADD_OPRID.Value, &rsHRS_JO_TEAM(&J).HRS_JO_TEAM.HRS_ROW_ADD_DTTM.Value, &rsHRS_JO_TEAM(&J).HRS_JO_TEAM.HRS_ROW_UPD_OPRID.Value, &rsHRS_JO_TEAM(&J).HRS_JO_TEAM.HRS_ROW_UPD_DTTM.Value);
+            /* ICE 1435177001 END */
+         End-If;
+      End-For;
+      &JOMisc.insJOTeam(&rsHRS_JO_TEAM);
+   End-If;
+   <*   If Not &rsHRS_JO_EXP_C(1).IsNew Then
+      &rsHRS_JO_EXP = CreateRowset(Record.HRS_JO_EXP);
+      &rsHRS_JO_EXP_C.CopyTo(&rsHRS_JO_EXP);
+      For &I = 1 To &rsHRS_JO_EXP.ActiveRowCount
+         &rsHRS_JO_EXP(&I).HRS_JO_EXP.HRS_JOB_OPENING_ID.Value = &nbrNewID;
+         &rsHRS_JO_TEAM(&J).HRS_JO_TEAM.HRS_JOB_OPENING_ID.Value = &nbrNewID;
+         /* ICE 1435177001 RR BEGIN */
+         /* Update Audit fields with new audit info */
+         &cls_lRowAudit.UpdateRowauditFields("A", &rsHRS_JO_EXP(&I).HRS_JO_EXP.HRS_ROW_ADD_OPRID.Value, &rsHRS_JO_EXP(&I).HRS_JO_EXP.HRS_ROW_ADD_DTTM.Value, &rsHRS_JO_EXP(&I).HRS_JO_EXP.HRS_ROW_UPD_OPRID.Value, &rsHRS_JO_EXP(&I).HRS_JO_EXP.HRS_ROW_UPD_DTTM.Value);
+         /* ICE 1435177001 END */
+      End-For;
+      &JOMisc.insJOExp(&rsHRS_JO_EXP);
+   End-If;*>
+   If Not &rsHRS_JO_RPL_C(1).IsNew Then
+      &rsHRS_JO_RPL = CreateRowset(Record.HRS_JO_RPL);
+      &rsHRS_JO_RPL_C.CopyTo(&rsHRS_JO_RPL);
+      For &I = 1 To &rsHRS_JO_RPL.ActiveRowCount
+         &rsHRS_JO_RPL(&I).HRS_JO_RPL.HRS_JOB_OPENING_ID.Value = &nbrNewID;
+         /* ICE 1435177001 RR BEGIN */
+         /* Update Audit fields with new audit info */
+         &cls_lRowAudit.UpdateRowauditFields("A", &rsHRS_JO_RPL(&I).HRS_JO_RPL.HRS_ROW_ADD_OPRID.Value, &rsHRS_JO_RPL(&I).HRS_JO_RPL.HRS_ROW_ADD_DTTM.Value, &rsHRS_JO_RPL(&I).HRS_JO_RPL.HRS_ROW_UPD_OPRID.Value, &rsHRS_JO_RPL(&I).HRS_JO_RPL.HRS_ROW_UPD_DTTM.Value);
+         /* ICE 1435177001 END */
+      End-For;
+      &JOMisc.insJORpl(&rsHRS_JO_RPL);
+   End-If;
+   If Not &rsHRS_JO_NAME_C(1).IsNew Then
+      &rsHRS_JO_NAME = CreateRowset(Record.HRS_JO_NAME);
+      &rsHRS_JO_NAME_C.CopyTo(&rsHRS_JO_NAME);
+      For &I = 1 To &rsHRS_JO_NAME.ActiveRowCount
+         &rsHRS_JO_NAME(&I).HRS_JO_NAME.HRS_JOB_OPENING_ID.Value = &nbrNewID;
+         /* ICE 1435177001 RR BEGIN */
+         /* Update Audit fields with new audit info */
+         &cls_lRowAudit.UpdateRowauditFields("A", &rsHRS_JO_NAME(&I).HRS_JO_NAME.HRS_ROW_ADD_OPRID.Value, &rsHRS_JO_NAME(&I).HRS_JO_NAME.HRS_ROW_ADD_DTTM.Value, &rsHRS_JO_NAME(&I).HRS_JO_NAME.HRS_ROW_UPD_OPRID.Value, &rsHRS_JO_NAME(&I).HRS_JO_NAME.HRS_ROW_UPD_DTTM.Value);
+         /* ICE 1435177001 END */
+      End-For;
+      &JOMisc.insJOName(&rsHRS_JO_NAME);
+   End-If;
+   If Not &rsHRS_AM_JO_C(1).IsNew Then
+      &rsHRS_AM_JO = CreateRowset(Record.HRS_AM_JO);
+      &rsHRS_AM_JO_C.CopyTo(&rsHRS_AM_JO);
+      For &I = 1 To &rsHRS_AM_JO.ActiveRowCount
+         &rsHRS_AM_JO(&I).HRS_AM_JO.HRS_JOB_OPENING_ID.Value = &nbrNewID;
+         /* ICE 1435177001 RR BEGIN */
+         /* Update Audit fields with new audit info */
+         &cls_lRowAudit.UpdateRowauditFields("A", &rsHRS_AM_JO(&I).HRS_AM_JO.HRS_ROW_ADD_OPRID.Value, &rsHRS_AM_JO(&I).HRS_AM_JO.HRS_ROW_ADD_DTTM.Value, &rsHRS_AM_JO(&I).HRS_AM_JO.HRS_ROW_UPD_OPRID.Value, &rsHRS_AM_JO(&I).HRS_AM_JO.HRS_ROW_UPD_DTTM.Value);
+         /* ICE 1435177001 END */
+      End-For;
+      &JOMisc.insJOAMJO(&rsHRS_AM_JO);
+   End-If;
+   If Not &rsHRS_G_JO_PRI_C(1).IsNew Then
+      &rsHRS_G_JO_PRI = CreateRowset(Record.HRS_G_JO_PRI);
+      &rsHRS_G_JO_PRI_C.CopyTo(&rsHRS_G_JO_PRI);
+      For &I = 1 To &rsHRS_G_JO_PRI.ActiveRowCount
+         &rsHRS_G_JO_PRI(&I).HRS_G_JO_PRI.HRS_JOB_OPENING_ID.Value = &nbrNewID;
+         /* ICE 1435177001 RR BEGIN */
+         /* Update Audit fields with new audit info */
+         &cls_lRowAudit.UpdateRowauditFields("A", &rsHRS_G_JO_PRI(&I).HRS_G_JO_PRI.HRS_ROW_ADD_OPRID.Value, &rsHRS_G_JO_PRI(&I).HRS_G_JO_PRI.HRS_ROW_ADD_DTTM.Value, &rsHRS_G_JO_PRI(&I).HRS_G_JO_PRI.HRS_ROW_UPD_OPRID.Value, &rsHRS_G_JO_PRI(&I).HRS_G_JO_PRI.HRS_ROW_UPD_DTTM.Value);
+         /* ICE 1435177001 END */
+      End-For;
+      &JOMisc.insJOPriPl(&rsHRS_G_JO_PRI);
+   End-If;
+   
+end-method;
+
+
+/**
+  *  getJOTeam - retrieve team members
+  *  
+  *  @param job opening ID
+  *  @return rowset of team member IDs
+  *
+  */
+method getJOTeam
+   /+ &HRS_JOB_OPENING_ID as Number +/
+   /+ Returns Rowset +/
+   
+   Return &JOMisc.getJOTeam(&HRS_JOB_OPENING_ID);
+   
+end-method;
+
+/**
+  *  getJOPsnType - get job opening location type
+  *
+  *  @param job opening id
+  *  @return array of job opening location type
+  */
+method getJOPsnType
+   /+ &HRS_JOB_OPENING_ID as Number +/
+   /+ Returns Array of HRS_JOB_OPENING_MANAGER:COMMON:TYPES:JOPsnType +/
+   
+   Local HRS_JOB_OPENING_MANAGER:COMMON:DATA:HR &HR = create HRS_JOB_OPENING_MANAGER:COMMON:DATA:HR();
+   Local array of HRS_JOB_OPENING_MANAGER:COMMON:TYPES:JOPsnType &arrJOPsnType;
+   Local HRS_JOB_OPENING_MANAGER:COMMON:TYPES:JOPsnType &JOPsnType;
+   Local number &I;
+   Local Rowset &rs = &JOMisc.getJOPosn(&HRS_JOB_OPENING_ID);
+   &arrJOPsnType = CreateArrayRept(&JOPsnType, 0);
+   
+   For &I = 1 To &rs.ActiveRowCount
+      &JOPsnType = create HRS_JOB_OPENING_MANAGER:COMMON:TYPES:JOPsnType();
+      If All(&rs(&I).HRS_JO_POSN.POSITION_NBR.Value) Then
+         &JOPsnType.POSITION_NBR = &rs(&I).HRS_JO_POSN.POSITION_NBR.Value;
+         If %This.isFederal Then
+            &JOPsnType.POSITION_DESCR = &HR.getPsnFed(&rs(&I).HRS_JO_POSN.POSITION_NBR.Value, %Date).GVT_ORG_TTL_DESCR.Value;
+         End-If;
+         If &JOPsnType.POSITION_DESCR = "" Then
+            &JOPsnType.POSITION_DESCR = &HR.getPsnComm(&rs(&I).HRS_JO_POSN.POSITION_NBR.Value, %Date).DESCR.Value;
+         End-If;
+         &JOPsnType.HRS_JO_PRM_PSN_FLG = &rs(&I).HRS_JO_POSN.HRS_JO_PRM_PSN_FLG.Value;
+         &arrJOPsnType.Push(&JOPsnType);
+      End-If;
+   End-For;
+   
+   Return &arrJOPsnType;
+   
+end-method;
+
+/**
+  *  getJOTeamType - get job opening team type
+  *
+  *  @param job opening id
+  *  @return array of job opening team type
+  */
+method getJOTeamType
+   /+ &HRS_JOB_OPENING_ID as Number +/
+   /+ Returns Array of HRS_JOB_OPENING_MANAGER:COMMON:TYPES:JOTeamType +/
+   
+   Local array of HRS_JOB_OPENING_MANAGER:COMMON:TYPES:JOTeamType &arrJOTeamType;
+   Local HRS_JOB_OPENING_MANAGER:COMMON:TYPES:JOTeamType &JOTeamType;
+   Local HRS_BO:BUS:PersonProfile &Person = create HRS_BO:BUS:PersonProfile();
+   Local number &I;
+   Local Rowset &rs = &JOMisc.getJOTeam(&HRS_JOB_OPENING_ID);
+   &arrJOTeamType = CreateArrayRept(&JOTeamType, 0);
+   
+   For &I = 1 To &rs.ActiveRowCount
+      &JOTeamType = create HRS_JOB_OPENING_MANAGER:COMMON:TYPES:JOTeamType();
+      If All(&rs(&I).HRS_JO_TEAM.EMPLID.Value) Then
+         &JOTeamType.HRS_JO_TM_TYPE = &rs(&I).HRS_JO_TEAM.HRS_JO_TM_TYPE.Value;
+         &JOTeamType.EMPLID = &rs(&I).HRS_JO_TEAM.EMPLID.Value;
+         &Person.setEmplId(&rs(&I).HRS_JO_TEAM.EMPLID.Value);
+         try
+            &JOTeamType.rsName = &Person.getPersonName(&JOTeamType.rsName);
+         catch HMCR_FRAMEWORK:ServiceFramework:baseClasses:baseException &ex1;
+         end-try;
+         &JOTeamType.HRS_JO_TM_PRIMARY = &rs(&I).HRS_JO_TEAM.HRS_JO_TM_PRIMARY.Value;
+         &arrJOTeamType.Push(&JOTeamType);
+      End-If;
+   End-For;
+   
+   Return &arrJOTeamType;
+   
+end-method;
+
+/**
+  *  getJOLocType - get job opening location type
+  *
+  *  @param job opening id
+  *  @return array of job opening location type
+  */
+method getJOLocType
+   /+ &HRS_JOB_OPENING_ID as Number, +/
+   /+ &BUSINESS_UNIT as String +/
+   /+ Returns Array of HRS_JOB_OPENING_MANAGER:COMMON:TYPES:JOLocType +/
+   
+   Local HRS_JOB_OPENING_MANAGER:COMMON:DATA:HR &HR = create HRS_JOB_OPENING_MANAGER:COMMON:DATA:HR();
+   Local array of HRS_JOB_OPENING_MANAGER:COMMON:TYPES:JOLocType &arrJOLocType;
+   Local HRS_JOB_OPENING_MANAGER:COMMON:TYPES:JOLocType &JOLocType;
+   Local number &I;
+   Local Rowset &rs = &JOMisc.getJOLoc(&HRS_JOB_OPENING_ID);
+   &arrJOLocType = CreateArrayRept(&JOLocType, 0);
+   
+   For &I = 1 To &rs.ActiveRowCount
+      &JOLocType = create HRS_JOB_OPENING_MANAGER:COMMON:TYPES:JOLocType();
+      If All(&rs(&I).HRS_JO_LOC.LOCATION.Value) Then
+         &JOLocType.LOCATION = &rs(&I).HRS_JO_LOC.LOCATION.Value;
+         &JOLocType.LOCATION_DESCR = &HR.getLocation(&BUSINESS_UNIT, &rs(&I).HRS_JO_LOC.LOCATION.Value, %Date).DESCR.Value;
+         &JOLocType.HRS_JO_PRM_LOC_FLG = &rs(&I).HRS_JO_LOC.HRS_JO_PRM_LOC_FLG.Value;
+         &arrJOLocType.Push(&JOLocType);
+      End-If;
+   End-For;
+   
+   Return &arrJOLocType;
+   
+end-method;
+
+/**
+  *  getJOLocAreaType - get job opening location area type
+  *
+  *  @param job opening id
+  *  @return array of job opening location area type
+  */
+method getJOLocAreaType
+   /+ &HRS_JOB_OPENING_ID as Number, +/
+   /+ &BUSINESS_UNIT as String +/
+   /+ Returns Array of HRS_JOB_OPENING_MANAGER:COMMON:TYPES:JOLocAreaType +/
+   
+   Local HRS_JOB_OPENING_MANAGER:COMMON:DATA:HR &HR = create HRS_JOB_OPENING_MANAGER:COMMON:DATA:HR();
+   Local array of HRS_JOB_OPENING_MANAGER:COMMON:TYPES:JOLocAreaType &arrJOLocAreaType;
+   Local HRS_JOB_OPENING_MANAGER:COMMON:TYPES:JOLocAreaType &JOLocAreaType;
+   Local number &I;
+   Local Rowset &rs = &JOMisc.getJOLocArea(&HRS_JOB_OPENING_ID);
+   &arrJOLocAreaType = CreateArrayRept(&JOLocAreaType, 0);
+   
+   For &I = 1 To &rs.ActiveRowCount
+      &JOLocAreaType = create HRS_JOB_OPENING_MANAGER:COMMON:TYPES:JOLocAreaType();
+      If All(&rs(&I).HRS_JO_LOC_AREA.HRS_LOCATION_ID.Value) Then
+         &JOLocAreaType.HRS_LOCATION_ID = &rs(&I).HRS_JO_LOC_AREA.HRS_LOCATION_ID.Value;
+         &JOLocAreaType.HRS_LOCATION_DESCR = &HR.getLocationArea(&BUSINESS_UNIT, &rs(&I).HRS_JO_LOC_AREA.HRS_LOCATION_ID.Value).DESCR.Value;
+         &JOLocAreaType.HRS_JO_PRM_LCA_FLG = &rs(&I).HRS_JO_LOC_AREA.HRS_JO_PRM_LCA_FLG.Value;
+         &arrJOLocAreaType.Push(&JOLocAreaType);
+      End-If;
+   End-For;
+   
+   Return &arrJOLocAreaType;
+   
+end-method;
+
+/**
+  *  insJOExpIntfc - inserts job opening expense record
+  *
+  *  @param job opening expense type
+  */
+method insJOExpIntfc
+   /+ &JOExpType as HRS_JOB_OPENING_MANAGER:COMMON:TYPES:JOExpType +/
+   
+   &JOMisc.insJOExpIntfc(&JOExpType);
+   
+end-method;
+
+get isFederal
+   /+ Returns Boolean +/
+   Local HRS_BO:BUS:BODefaults &BODefaults = create HRS_BO:BUS:BODefaults();
+   Return &BODefaults.isFederal();
+end-get;
+
