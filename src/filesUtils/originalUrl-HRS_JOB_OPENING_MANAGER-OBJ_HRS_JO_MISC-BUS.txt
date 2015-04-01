@@ -9,7 +9,7 @@ import HRS_JOB_OPENING_MANAGER:COMMON:DATA:HR;
 import HRS_BO:BUS:BODefaults;
 import HRS_BO:BUS:PersonProfile;
 import HMCR_FRAMEWORK:ServiceFramework:baseClasses:baseException;
-origianl  -->import HRS_COMMON:COMMON:UTIL:RowAudit;
+import HRS_COMMON:COMMON:UTIL:RowAudit;
 
 /**
   *  class JOMisc
