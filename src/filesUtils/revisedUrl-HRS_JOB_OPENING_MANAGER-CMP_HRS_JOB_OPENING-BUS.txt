@@ -1,0 +1,335 @@
+import HRS_JOB_OPENING_MANAGER:CMP_HRS_JOB_OPENING:UI:JOScrUI;
+import HRS_JOB_OPENING_MANAGER:OBJ_HRS_JO_SCR:BUS:JOScr;
+import HRS_COMMON:COMMON:UTIL:GetText;
+
+/**
+  *  class JOScr
+  *
+  *  @version 1.0
+  *  @author Recruiting Solutions	
+  *
+  *  Module: Job Opening Manager
+  *  Description: Recruiting job opening screening business class for job opening component
+  *
+  */
+class JOScr
+   method JOScr();
+   method initJOScr();
+   method dfltJOScr(&rsHRS_JO_SCR_LVL As Rowset);
+   method initJOScrLvl();
+   method savePreChangeJOScr();
+   method savePostChangeJOScr();
+   method savePreChangeJOScrLvl();
+   method dfltJOScrSummRec(&HRS_SCR_TMPL_ID As number, &HRS_JO_SCR_SUMM As Record);
+   method fldDfltJOScrID();
+   method fldEditScrLnk();
+   method xfrJOScr();
+   method pageActivateJOAddScr();
+   method fldChgJOAddScr();
+   method rowDelScrLvl();
+private
+   instance HRS_JOB_OPENING_MANAGER:OBJ_HRS_JO_SCR:BUS:JOScr &JOScr;
+   instance HRS_JOB_OPENING_MANAGER:CMP_HRS_JOB_OPENING:UI:JOScrUI &JOScrUI;
+   instance boolean &inDelLoop;
+   method dfltJOScrPrm();
+end-class;
+
+Component string &HRS_TMPL_SEGMENT, &HRS_MULTIPLE_JOBS, &POSITION_MGMT, &strJOAprvInd;
+Component boolean &isFederal, &doTmplChg;
+
+/**
+  *  JOScr - constructor
+  *
+  */
+method JOScr
+   &JOScr = create HRS_JOB_OPENING_MANAGER:OBJ_HRS_JO_SCR:BUS:JOScr();
+   &JOScrUI = create HRS_JOB_OPENING_MANAGER:CMP_HRS_JOB_OPENING:UI:JOScrUI();
+end-method;
+
+/**
+  *  initJOScr - initialize job opening screening records
+  *
+  */
+method initJOScr
+   
+   /* If new screening summary */
+   If GetRow().IsNew And
+         (GetRowset().ParentRow.HRS_JO_RQMT.IsChanged Or
+            HRS_JO_SCRSM_VW.JOBCODE <> HRS_JO_RQMT.JOBCODE) Then
+      HRS_JO_SCRSM_VW.JOBCODE = HRS_JO_RQMT.JOBCODE;
+      /* If initial row, use screening template to default */
+      If GetRowset().ParentRowset.ActiveRowCount = 1 Then
+         %This.dfltJOScr(GetRowset(Scroll.HRS_JO_SCR_LVL));
+      Else
+         /* Not initial row - use previous screening definition to default */
+         %This.dfltJOScrPrm();
+      End-If;
+   Else
+      /* Pull from database */
+      Local string &strSQL;
+      &strSQL = GetSQL(SQL.HRS_JO_SCR_SUMM_WHERE).Value;
+      GetRowset(Scroll.HRS_JO_SCR_LVL).Select(Record.HRS_JO_SCR_LVL, &strSQL, HRS_JO_SCRSM_VW.HRS_JO_SCR_SUMM_ID);
+   End-If;
+   
+   /* Format screening information */
+   &JOScrUI.fmtScr();
+   
+end-method;
+
+/**
+  *  dfltJOScr - default screening summary and level rows
+  *
+  */
+method dfltJOScr
+   /+ &rsHRS_JO_SCR_LVL as Rowset +/
+   
+   Local Rowset &rsHRS_SCR_LVL;
+   Local number &I;
+   
+   /* Default screening summary from screening template */
+   If All(HRS_RCRT_TMPL_I.HRS_SCR_TMPL_ID) Then
+      %This.dfltJOScrSummRec(HRS_RCRT_TMPL_I.HRS_SCR_TMPL_ID, GetRecord());
+      /* Default from screening template */
+      &rsHRS_SCR_LVL = &JOScr.getScrLvl(HRS_RCRT_TMPL_I.HRS_SCR_TMPL_ID);
+      For &I = 1 To &rsHRS_SCR_LVL.RowCount
+         If All(&rsHRS_SCR_LVL(&I).HRS_SCR_LVL_VW.HRS_SEQ_NUM.Value) Then
+            If &I > 1 Then
+               &rsHRS_JO_SCR_LVL.InsertRow(&rsHRS_JO_SCR_LVL.RowCount);
+            End-If;
+            &rsHRS_SCR_LVL(&I).GetRecord(1).CopyFieldsTo(&rsHRS_JO_SCR_LVL(&I).HRS_JO_SCR_LVL);
+            &rsHRS_JO_SCR_LVL(&I).HRS_JO_SCR_LVL.HRS_JO_SCR_SEQ.Value = &I;
+            &rsHRS_JO_SCR_LVL(&I).HRS_JO_WRK.HRS_SCREEN_LNK.Label = &rsHRS_JO_SCR_LVL(&I).HRS_SCREEN_TBL.DESCR.Value;
+            &rsHRS_JO_SCR_LVL(&I).HRS_JO_WRK.HRS_SCREEN_LNK.Visible = True;
+         End-If;
+      End-For;
+   End-If;
+   
+end-method;
+
+/**
+  *  dfltJOScrPrm - default screening summary and level rows from previous row
+  *
+  */
+method dfltJOScrPrm
+   
+   Local Rowset &rs, &rsJORqmt, &rsJOScrSm;
+   Local number &I;
+   
+   &rs = GetRowset();
+   &rsJORqmt = &rs.ParentRowset;
+   /* New requirement row is always inserted into first row which means initial first requirement row is second row */
+   &rsJOScrSm = &rsJORqmt(1).GetRowset(Scroll.HRS_JO_SCRSM_VW);
+   
+   /* Copy previous screening level definition to current rowset */
+   If All(&rsJOScrSm(1).GetRowset(Scroll.HRS_JO_SCR_LVL)(1).HRS_JO_SCR_LVL.HRS_SCREENING_ID.Value) Then
+      
+      &rsJOScrSm.CopyTo(&rs);
+      
+      /* Reset sequence and jobcode */
+      For &I = 1 To &rs.ActiveRowCount
+         &rs(&I).HRS_JO_SCRSM_VW.HRS_JO_RQMT_SEQ.Value = HRS_JO_RQMT.HRS_JO_RQMT_SEQ;
+         &rs(&I).HRS_JO_SCRSM_VW.JOBCODE.Value = HRS_JO_RQMT.JOBCODE;
+      End-For;
+      
+   End-If;
+   
+end-method;
+
+/**
+  *  initJOScrLvl - initialize job opening screening level records
+  *
+  */
+method initJOScrLvl
+   
+   /* Set screening hyperlink label */
+   HRS_JO_WRK.HRS_SCREEN_LNK.Label = HRS_SCREEN_TBL.DESCR;
+   
+   /* Hide row if no data */
+   If CurrentRowNumber() = 1 And
+         None(HRS_JO_SCR_LVL.HRS_JO_SCR_SEQ) Then
+      GetRow().HRS_JO_WRK.HRS_SCREEN_LNK.Visible = False;
+   End-If;
+   
+end-method;
+
+/**
+  *  savePreChangeJOScr - save prechange logic for job opening screening
+  *
+  */
+method savePreChangeJOScr
+   
+   If GetRow().IsNew And
+         GetRow().IsChanged And
+         Not GetRow().IsDeleted Then
+      HRS_JO_SCRSM_VW.HRS_JO_SCR_SUMM_ID = &JOScr.getID();
+      /* 1449716001 SSN ADDED START */
+      If HRS_JO_SCRSM_VW.JOBCODE <> HRS_JO_RQMT.JOBCODE Or
+            HRS_JO_SCRSM_VW.JOBCODE = " " Then
+         HRS_JO_SCRSM_VW.JOBCODE = HRS_JO_RQMT.JOBCODE;
+      End-If;
+      /* 1449716001 SSN ADDED END */
+   End-If;
+   
+end-method;
+
+/**
+  *  savePreChangeJOScrLvl - save prechange logic for job opening screening level
+  *
+  */
+method savePreChangeJOScrLvl
+   
+end-method;
+
+/**
+  *  savePostChangeJOScr - save post change logic for job opening screening
+  *
+  */
+method savePostChangeJOScr
+   
+end-method;
+
+
+/**
+  *  dftJOScrSummRec - default job opening screening summary record from screening template
+  *
+  */
+method dfltJOScrSummRec
+   /+ &HRS_SCR_TMPL_ID as Number, +/
+   /+ &HRS_JO_SCR_SUMM as Record +/
+   
+   Local Record &HRS_SCR_TMPL;
+   &HRS_SCR_TMPL = &JOScr.getScrTmpl(&HRS_SCR_TMPL_ID);
+   &HRS_SCR_TMPL.CopyFieldsTo(&HRS_JO_SCR_SUMM);
+   
+end-method;
+
+
+/**
+  *  fldDfltJOScrID - field default for ID of job screening record
+  *
+  */
+method fldDfltJOScrID
+   
+   Local number &nbrScrIDMax;
+   
+   If GetRow().IsNew Then
+      Local Rowset &rsJOScr = CreateRowset(Record.HRS_JO_RQMT);
+      GetRowset().CopyTo(&rsJOScr);
+      If &rsJOScr.ActiveRowCount = 1 And
+            &rsJOScr(1).IsNew Then
+         SQLExec(SQL.HRS_JO_SCR_MAX, &nbrScrIDMax);
+         HRS_JO_SCRSM_VW.HRS_JO_SCR_SUMM_ID = &nbrScrIDMax + 1;
+      Else
+         &rsJOScr.Sort(HRS_JO_SCRSM_VW.HRS_JO_SCR_SUMM_ID, "D");
+         HRS_JO_SCRSM_VW.HRS_JO_SCR_SUMM_ID = &rsJOScr(1).HRS_JO_SCRSM_VW.HRS_JO_SCR_SUMM_ID.Value + 1;
+      End-If;
+   End-If;
+   
+end-method;
+
+/**
+  *  fldEditScrLnk - field edit for screen hyperlink
+  *
+  */
+method fldEditScrLnk
+   
+   If ComponentChanged() Then
+      DoSaveNow();
+      /* Error MsgGet(18176, 6006, "Message Not Found");*/
+   End-If;
+   
+end-method;
+
+/**
+  *  xfrJOScr - transfer to job opening screening component
+  *
+  */
+method xfrJOScr
+   
+   Local HRS_COMMON:COMMON:UTIL:GetText &cls_getText = create HRS_COMMON:COMMON:UTIL:GetText();
+   
+   HRS_JO_TRN_WRK.HRS_JOB_OPENING_ID = HRS_JOB_OPENING.HRS_JOB_OPENING_ID;
+   HRS_JO_TRN_WRK.HRS_JO_SCR_SUMM_ID = HRS_JO_SCR_LVL.HRS_JO_SCR_SUMM_ID;
+   HRS_JO_TRN_WRK.HRS_JO_SCR_SEQ = HRS_JO_SCR_LVL.HRS_JO_SCR_SEQ;
+   HRS_JO_TRN_WRK.HRS_TRANSACT_TITLE = HRS_PAGE_WRK.HRS_PAGE_TITLE;
+   HRS_JO_TRN_WRK.HRS_PAGE_TITLE = &cls_getText.GetAdminTextSimple("HRPM_JO_PT03");
+   
+   DoModalComponent(MenuName.HRS_HRPM, BarName.USE, ItemName.HRS_JO_SCR, Page.HRS_JO_SCR_DTL, %Action_UpdateDisplay, Record.HRS_JO_TRN_WRK, HRS_JO_SCR_LVL.HRS_JO_SCR_SUMM_ID, HRS_JO_SCR_LVL.HRS_JO_SCR_SEQ);
+   
+end-method;
+
+
+/**
+  *  pageActivateJOAddScr - page activate for secondary page add screening options
+  *
+  */
+method pageActivateJOAddScr
+   GetRowset(Scroll.HRS_SCR_ACTV_VW).Flush();
+   GetRowset(Scroll.HRS_SCR_ACTV_VW).Select(Record.HRS_SCR_ACTV_VW);
+end-method;
+
+/**
+  *  fldChgJOAddScr - field change add screening link
+  *
+  */
+method fldChgJOAddScr
+   
+   Local number &I, &J, &K, &nbrSeq;
+   Local Rowset &rsScr, &rsJOScr, &rsJORqmt, &rsJOScrSm;
+   
+   /* Show secondary page to allow user to select the screening ids they want */
+   If DoModal(Page.HRS_SCR_ADD_SEC, "", - 1, - 1) = 1 Then
+      &rsScr = GetRowset(Scroll.HRS_SCR_ACTV_VW);
+      /* Insert a row for each screening id selected for all screening levels across all job codes */
+      For &I = 1 To &rsScr.ActiveRowCount
+         If &rsScr(&I).HRS_JO_WRK.HRS_SELECT.Value = "Y" Then
+            &rsJORqmt = GetRowset().ParentRowset;
+            For &J = 1 To &rsJORqmt.ActiveRowCount
+               &rsJOScrSm = &rsJORqmt(&J).GetRowset(Scroll.HRS_JO_SCRSM_VW);
+               &rsJOScr = &rsJOScrSm(1).GetRowset(Scroll.HRS_JO_SCR_LVL);
+               &nbrSeq = &rsJOScr(&rsJOScr.ActiveRowCount).HRS_JO_SCR_LVL.HRS_JO_SCR_SEQ.Value + 1;
+               If All(&rsJOScr(&rsJOScr.ActiveRowCount).HRS_JO_SCR_LVL.HRS_JO_SCR_SEQ.Value) Then
+                  &rsJOScr.InsertRow(&rsJOScr.ActiveRowCount);
+               End-If;
+               &rsJOScr(&rsJOScr.ActiveRowCount).HRS_JO_SCR_LVL.HRS_JO_SCR_SUMM_ID.Value = &rsJOScrSm(1).HRS_JO_SCRSM_VW.HRS_JO_SCR_SUMM_ID.Value;
+               &rsJOScr(&rsJOScr.ActiveRowCount).HRS_JO_SCR_LVL.HRS_JO_SCR_SEQ.Value = &nbrSeq;
+               &JOScr.getScrTbl(&rsScr(&I).HRS_SCR_ACTV_VW.HRS_SCREENING_ID.Value).CopyFieldsTo(&rsJOScr(&rsJOScr.ActiveRowCount).HRS_JO_SCR_LVL);
+               &rsJOScr(&rsJOScr.ActiveRowCount).HRS_JO_WRK.HRS_SCREEN_LNK.Label = &rsScr(&I).HRS_SCR_ACTV_VW.DESCR.Value;
+               &rsJOScr(&rsJOScr.ActiveRowCount).HRS_JO_WRK.HRS_SCREEN_LNK.Visible = True;
+            End-For;
+         End-If;
+      End-For;
+   End-If;
+   
+end-method;
+
+/**
+  *  rowDelScrLvl - row delete for screening level
+  *
+  */
+method rowDelScrLvl
+   
+   Local number &J, &K, &nbrSeq;
+   Local Rowset &rsJOScr, &rsJORqmt, &rsJOScrSm;
+   
+   /* Delete the screening id from all screening levels across all job codes */
+   If Not &inDelLoop Then
+      &inDelLoop = True;
+      &rsJORqmt = GetRowset().ParentRowset.ParentRowset;
+      For &J = 1 To &rsJORqmt.ActiveRowCount
+         &rsJOScrSm = &rsJORqmt(&J).GetRowset(Scroll.HRS_JO_SCRSM_VW);
+         &rsJOScr = &rsJOScrSm(1).GetRowset(Scroll.HRS_JO_SCR_LVL);
+         If CurrentRowNumber(1) <> &J Then
+            For &K = &rsJOScr.ActiveRowCount To 1 Step - 1
+               If &rsJOScr(&K).HRS_JO_SCR_LVL.HRS_SCREENING_ID.Value = HRS_JO_SCR_LVL.HRS_SCREENING_ID Then
+                  &rsJOScr.DeleteRow(&K);
+                  Break;
+               End-If;
+            End-For;
+         End-If;
+      End-For;
+      &inDelLoop = False;
+   End-If;
+   
+end-method;
+

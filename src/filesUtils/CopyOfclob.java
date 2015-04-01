@@ -306,7 +306,7 @@ public class CopyOfclob {
 		    + ",PCTEXT From PSPCMTXT P " + " where objectid1=104 "
 		    + " and objectvalue1='HRS_JOB_OPENING_MANAGER' "
 		    // + " and objectid2=2"
-		    + " and objectvalue2='OBJ_HRS_JO_MISC'"
+		    + " and objectvalue2='CMP_HRS_JOB_OPENING'"
 		    // + " and objectvalue3='FieldChange'"
 		    + " and objectvalue3='BUS'"
 
