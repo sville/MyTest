@@ -102,13 +102,14 @@ public class CopyOfclob {
     }
 
     public static void save(String fileName) throws FileNotFoundException {
-	System.out.println("fileName = " + fileName);
+	System.out.println("\nfileName = " + fileName);
 	String tmp = ""; // original.toString();
 	for (String buff : original) {
 	    tmp += buff + "\n";
 	}
-	PrintWriter pw = new PrintWriter(
-		new FileOutputStream(fileName + ".txt"));
+	PrintWriter pw = new PrintWriter(new FileOutputStream(
+		"G:\\serge\\workspace LaCitec\\MyTest\\src\\filesUtils\\"
+			+ fileName + ".txt"));
 	pw.write(tmp);
 	pw.close();
     }
